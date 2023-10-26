@@ -135,6 +135,7 @@ class RawTCPScanner:
     """
 
     """for reference: (RFC 761)
+    Checksum
      +--------+--------+--------+--------+
      |           Source Address          |
      +--------+--------+--------+--------+
