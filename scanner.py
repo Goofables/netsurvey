@@ -26,8 +26,8 @@ class DB:
         except:
             pass
         self.f = open("scan_data.bin", "r+b")
-        self.f.truncate(256 ** 4)
-        self.map = mmap.mmap(self.f.fileno(), length=256 ** 4, access=mmap.ACCESS_WRITE)
+        self.f.truncate(256**4)
+        self.map = mmap.mmap(self.f.fileno(), length=256**4, access=mmap.ACCESS_WRITE)
         # self.map = self.f
 
     def read(self, n: int):
@@ -62,11 +62,11 @@ def checksum(data):
         data += b"\0"
     s = 0
     for i in range(0, len(data), 2):
-        s += struct.unpack("!H", data[i:i + 2])[0]
-    s = (s >> 16) + (s & 0xffff)
+        s += struct.unpack("!H", data[i : i + 2])[0]
+    s = (s >> 16) + (s & 0xFFFF)
     s += s >> 16
     s = ~s
-    return s & 0xffff
+    return s & 0xFFFF
 
 
 def tcp_syn(src: int, dst: int, src_port: int, dst_port: int):
@@ -95,20 +95,29 @@ def tcp_syn(src: int, dst: int, src_port: int, dst_port: int):
         "!IIHHHHIIHHHH",
         src,
         dst,
-        protocol, 20,
-        src_port, dst_port,
+        protocol,
+        20,
+        src_port,
+        dst_port,
         seq,
         ack,
-        header_len << 12 | tcp_flags, window,
-        tcp_checksum, urgent
+        header_len << 12 | tcp_flags,
+        window,
+        tcp_checksum,
+        urgent,
     )
     # print(tcp_with_pseudo_header.hex())
     tcp_checksum = checksum(tcp_with_pseudo_header)
     ip_header = struct.pack(
         "!BBHHHBBHII",
-        version << 4 | tcp_header_length, tos, total_length,
-        identification, ip_flags << 13 | fragment_offset,
-        ttl, protocol, ip_checksum,
+        version << 4 | tcp_header_length,
+        tos,
+        total_length,
+        identification,
+        ip_flags << 13 | fragment_offset,
+        ttl,
+        protocol,
+        ip_checksum,
         src,
         dst,
     )
@@ -116,16 +125,24 @@ def tcp_syn(src: int, dst: int, src_port: int, dst_port: int):
     # print(f"TCP: {hex(tcp_checksum)} IP: {hex(ip_checksum)}")
     return struct.pack(
         "!BBHHHBBHIIHHIIHHHH",
-        version << 4 | tcp_header_length, tos, total_length,
-        identification, ip_flags << 13 | fragment_offset,
-        ttl, protocol, ip_checksum,
+        version << 4 | tcp_header_length,
+        tos,
+        total_length,
+        identification,
+        ip_flags << 13 | fragment_offset,
+        ttl,
+        protocol,
+        ip_checksum,
         src,
         dst,
-        src_port, dst_port,
+        src_port,
+        dst_port,
         seq,
         ack,
-        header_len << 12 | tcp_flags, window,
-        tcp_checksum, urgent
+        header_len << 12 | tcp_flags,
+        window,
+        tcp_checksum,
+        urgent,
     )
 
 
@@ -234,10 +251,11 @@ class RawTCPScanner:
             raw_bytes, address = self.socket.recvfrom(40)  # receive 40 bytes from * # 40 = tcp header
 
             # Confirm received packet is SYNACK
-            if int(raw_bytes[33]) != (2 | 16): continue  # flags at 20 + 13; SYN=2 ACK=16
+            if int(raw_bytes[33]) != (2 | 16):
+                continue  # flags at 20 + 13; SYN=2 ACK=16
 
             # Gets the source port (at 20 + 0) from the raw bytes from the socket without scapy
-            src_port = int.from_bytes(raw_bytes[20:22], byteorder='big')
+            src_port = int.from_bytes(raw_bytes[20:22], byteorder="big")
 
             self.logger.debug(f"+{address[0]}: {address[1]} {src_port}")
 
@@ -250,7 +268,8 @@ class RawTCPScanner:
         """
         Kills the listener thread
         """
-        if not self.listening: return
+        if not self.listening:
+            return
         self.listening = False
         if self.receiver_thread is not None:
             self.receiver_thread.join()
@@ -274,8 +293,7 @@ class RawTCPScanner:
         # self.logger.debug(f"Send to {address}:{port}")  # Very verbose
         self.sent_packets += 1
         self.socket.sendto(
-            (IP(dst=address) / TCP(dport=port, flags=flags, sport=self.LISTEN_PORT)).build(),
-            (address, 0)
+            (IP(dst=address) / TCP(dport=port, flags=flags, sport=self.LISTEN_PORT)).build(), (address, 0)
         )
 
     def _send_syn(self, dst: int, port: int = 0) -> None:
@@ -288,8 +306,7 @@ class RawTCPScanner:
         # self.logger.debug(f"Send to {address}:{port}")  # Very verbose
         self.sent_packets += 1
         self.socket.sendto(
-            tcp_syn(src=self.SRC_IP_INT, dst=dst, src_port=self.LISTEN_PORT, dst_port=port),
-            ("1.0.0.0", 0)
+            tcp_syn(src=self.SRC_IP_INT, dst=dst, src_port=self.LISTEN_PORT, dst_port=port), ("1.0.0.0", 0)
         )
 
     def send_probes(self, *, hosts: list[int], port: int, _threads: int = 20):
@@ -304,11 +321,7 @@ class RawTCPScanner:
         """
 
         # the main scanning loop
-        self.send_pool.imap_unordered(
-            functools.partial(self._send_syn, port=port),
-            hosts,
-            chunksize=_threads
-        )
+        self.send_pool.imap_unordered(functools.partial(self._send_syn, port=port), hosts, chunksize=_threads)
 
     def __del__(self):
         # self.logger.info("Shutting down")
