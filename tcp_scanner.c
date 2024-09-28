@@ -16,14 +16,6 @@
 
 #include "tcp_scanner.h"
 
-//struct scanner_t {
-//    unsigned const short SCAN_PORTS[8];
-//    unsigned long stats[8];
-//    int stop;
-//    struct sockaddr_in serv_addr;
-//    int sock;
-//};
-
 struct response_t {
     struct ip ip;
     struct tcphdr tcp;
@@ -128,7 +120,6 @@ void send_syn(struct scanner_t *scanner, const unsigned int dst_ip, const unsign
     unsigned int ip_chk = checksum((unsigned short *) &packet.ip, sizeof(packet.ip));
 
     packet.ip.ip_sum = ip_chk;
-
 //    printf("Sending\n");
     if (sendto(
             scanner->sock,
@@ -147,22 +138,6 @@ void send_syn(struct scanner_t *scanner, const unsigned int dst_ip, const unsign
                 htons(packet.tcp.th_dport));
         sleep(1);
     }
-//    sleep(1);
-
-/*    //// DEBUG:
-       packet.ip.ip_sum = ip_chk;
-       packet.tcp.th_sum = tcp_chk;
-       printf("TCP: ");
-       print_hex(packet.tcp.th_sum >> 8);
-       print_hex(packet.tcp.th_sum);
-       printf(" bd13\n IP: ");
-       print_hex(packet.ip.ip_sum >> 8);
-       print_hex(packet.ip.ip_sum);
-       printf(" fffe\nall: ");
-       print_hex(checksum((unsigned short *) &packet, sizeof(packet)) >> 8);
-       print_hex(checksum((unsigned short *) &packet, sizeof(packet)));
-       printf(" ea7b\n");
-    // */
 }
 
 
@@ -182,7 +157,7 @@ void *listen_loop(void *args) {
         //        resp.ip.ip_dst.s_addr & 0xff, resp.ip.ip_dst.s_addr >> 8 & 0xff, resp.ip.ip_dst.s_addr >> 16 & 0xff,
         //        resp.ip.ip_dst.s_addr >> 24, htons(resp.tcp.th_sport), htons(resp.tcp.th_dport), resp.tcp.syn,
         //        resp.tcp.ack);
-        unsigned short src_port = htons(resp.tcp.th_sport);
+        const unsigned short src_port = htons(resp.tcp.th_sport);
         for (const unsigned short *p = scanner->ports; *p != 0; p++) {
             if (*p == src_port) {
                 scanner->callback(&resp);
@@ -253,97 +228,3 @@ void shutdown_listen_thread(struct scanner_t *scanner) {
 
     pthread_join(scanner->listen_thread, NULL);
 }
-
-//void send_syn_all_optimized(unsigned const short d_port, struct scanner_t *scan) {
-//
-//    struct sockaddr_in dst_addr_generic = {};
-//    dst_addr_generic.sin_family = AF_INET;
-//    dst_addr_generic.sin_addr.s_addr = 1;
-//    dst_addr_generic.sin_port = htons(d_port);
-//
-//    struct {
-//        struct ip ip;
-//        struct tcphdr tcp;
-//    } packet = {};
-//
-//    packet.ip.ip_src.s_addr = s_addr;
-//    packet.ip.ip_dst.s_addr = 0;
-//    packet.ip.ip_p = IPPROTO_TCP;
-//    packet.ip.ip_len = htons(20);
-//
-//    packet.tcp.th_sport = s_port;
-//    packet.tcp.th_dport = dst_addr_generic.sin_port;
-//    //    packet.tcp.seq = 0;
-//    //    packet.tcp.ack = 0;
-//    packet.tcp.th_off = 5;
-//    packet.tcp.th_flags = TH_SYN;
-//    packet.tcp.th_win = htons(8192);
-//    //    packet.tcp.th_sum = 0;
-//    //    packet.tcp.th_urp = 0;
-//
-//    unsigned int tcp_chk = checksum((unsigned short *) &packet, sizeof(packet));
-//
-//    packet.ip.ip_v = IPVERSION;
-//    packet.ip.ip_hl = 5;
-//    //    packet.ip.ip_tos = 0;
-//    packet.ip.ip_id = htons(1);
-//    //    packet.ip.ip_off = 0;
-//    packet.ip.ip_ttl = 64;
-//    packet.ip.ip_len = htons(40);
-//    //    packet.ip.ip_sum = 0
-//
-//    unsigned int ip_chk = checksum((unsigned short *) &packet.ip, sizeof(packet.ip));
-//    unsigned int tmp, tmp_chk;
-//    for (
-//            unsigned int i = 1; i > 0; i++
-//            ) {
-//        // unsigned int i = 256 * 256 * 256 + 10;
-//        if ((i & 0xff) == 127) continue;
-//        if ((i & 0xff) >= 224) continue;
-//        // if ((i & 0xffff) != 10) continue;
-//
-//        tmp = (i >> 16) + (i & 0xffff);
-//        tmp = (tmp >> 16) + (tmp & 0xffff);
-//
-//        tmp_chk = tcp_chk - tmp;
-//        packet.tcp.th_sum = (tmp_chk >> 16) + tmp_chk & 0xffff;
-//
-//        tmp_chk = ip_chk - tmp;
-//        packet.ip.ip_sum = (tmp_chk >> 16) + tmp_chk & 0xffff;
-//
-//        packet.ip.ip_dst.s_addr = i;
-//
-//        // printf("Sending\n");
-//        if (sendto(sock, &packet, sizeof(packet), 0, (struct sockaddr *) &dst_addr_generic, sizeof(dst_addr_generic)) <
-//            0) {
-//            printf(
-//                    "Attempted to syn %d > %d.%d.%d.%d:%d\n",
-//                    htons(packet.tcp.th_sport),
-//                    packet.ip.ip_dst.s_addr & 0xff,
-//                    packet.ip.ip_dst.s_addr >> 8 & 0xff,
-//                    packet.ip.ip_dst.s_addr >> 16 & 0xff,
-//                    packet.ip.ip_dst.s_addr >> 24 & 0xff,
-//                    htons(packet.tcp.th_dport));
-//            sleep(1);
-//            i -= 1;
-//            continue;
-//            exit_critical_error("send");
-//
-//        }
-//    }
-//
-//    /*//// DEBUG:
-//       packet.ip.ip_sum = ip_chk;
-//       packet.tcp.th_sum = tcp_chk;
-//       printf("TCP: ");
-//       print_hex(packet.tcp.th_sum >> 8);
-//       print_hex(packet.tcp.th_sum);
-//       printf(" bd13\n IP: ");
-//       print_hex(packet.ip.ip_sum >> 8);
-//       print_hex(packet.ip.ip_sum);
-//       printf(" fffe\nall: ");
-//       print_hex(checksum((unsigned short *) &packet, sizeof(packet)) >> 8);
-//       print_hex(checksum((unsigned short *) &packet, sizeof(packet)));
-//       printf(" ea7b\n");
-//    // */
-//}
