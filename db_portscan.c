@@ -127,18 +127,20 @@ int main(int argc, char *argv[]) {
 
         for (const unsigned short *port = SCAN_PORTS; *port != 0; port++) {
             for (unsigned int ip = target.net; ip < target.last; ip++) {
-                unsigned int a = htonl(ip);
+//                unsigned int a = htonl(ip);
 //                printf("Host: ");
 //                print_ip(a);
 //                printf(" Port: %d (%d)\n", *port, id);
-
-                send_syn(&scanner, a, *port);
+                send_syn(&scanner, htonl(ip), *port);
+                send_syn(&scanner, htonl(ip), *port);
+                if (ip % 10 == 0) usleep(1); // 500000 microsecond = 0.5s
             }
+            usleep(100000); // 100000 microsecond = 0.1s
         }
-        break;
+        usleep(100000); // 100000 microsecond = 0.1s
     }
 
-//    sleep(10);
+    sleep(10);
 
 
     sql_cleanup();
